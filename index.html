@@ -1456,7 +1456,27 @@ function mesDesFecha(dateStr) {
 }
 
 function occupiedKey(d,c,h){ return `${d}_${c}_${h}`; }
-function isOccupied(d,c,h){ return OCCUPIED.has(occupiedKey(d,c,h)); }
+
+// Canchas de F5 que forman físicamente la Cancha Principal (F9)
+const F9_COMPONENTES = ['f5-2', 'f5-3', 'f5-4'];
+const F9_ID = 'f9-1';
+
+function isOccupied(d, c, h) {
+  // Ocupación directa (marcada con X en la Sheet)
+  if (OCCUPIED.has(occupiedKey(d, c, h))) return true;
+
+  // Si consultan la Cancha Principal → ocupada si CUALQUIERA de sus componentes lo está
+  if (c === F9_ID) {
+    return F9_COMPONENTES.some(comp => OCCUPIED.has(occupiedKey(d, comp, h)));
+  }
+
+  // Si consultan Cancha 2, 3 o 4 → ocupada si la Cancha Principal lo está
+  if (F9_COMPONENTES.includes(c)) {
+    return OCCUPIED.has(occupiedKey(d, F9_ID, h));
+  }
+
+  return false;
+}
 
 // Marquee con texto (sin emojis)
 (function(){
