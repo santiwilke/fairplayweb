@@ -1658,6 +1658,7 @@ async function init(){
   state.date = today;
 
   document.getElementById('fechaInput').addEventListener('change', e=>{
+    if(e.target.value < todayStr()){ e.target.value = todayStr(); }
     state.date = e.target.value;
     // Si la hora seleccionada ya pasó para la nueva fecha, resetear
     if(state.hour !== null && isPast(state.date, state.hour)){
