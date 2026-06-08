@@ -790,6 +790,30 @@
       .hero-stats { flex-wrap:wrap; }
       .hero-stat { min-width:50%; border-bottom:1px solid rgba(245,240,232,.08); }
       .services-grid { grid-template-columns:1fr 1fr; }
+
+      /* Courts — 2 por fila en mobile */
+      .courts-row { flex-wrap:wrap; gap:16px; }
+      .court-card { flex:0 0 calc(50% - 8px); padding:24px 18px; }
+      .court-num { font-size:60px; }
+      .court-name { font-size:22px; }
+
+      /* Reservas — tipo de cancha scrollable */
+      #reservas { padding:60px 20px; }
+      .type-grid {
+        grid-template-columns: repeat(3,1fr);
+        overflow-x:auto;
+      }
+      .type-btn { padding:14px 8px; }
+      .type-btn-name { font-size:13px; }
+
+      /* Steps — reducir padding */
+      .step { padding:10px 6px; font-size:10px; }
+      .step-num { font-size:16px; }
+    }
+
+    @media (max-width:400px) {
+      .court-card { flex:0 0 100%; }
+      .type-grid { grid-template-columns:repeat(2,1fr); }
     }
 
     /* ── BOTÓN FLOTANTE RESERVA ── */
