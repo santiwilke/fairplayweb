@@ -631,6 +631,8 @@
     .time-slot.selected { background:var(--gold); color:var(--ink); border-color:var(--gold2); }
     .time-slot.end-mark { border-left:3px solid var(--gold2); color:rgba(245,240,232,.4); font-size:10px; }
     .time-slot.end-mark::before { content:'fin'; display:block; font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--gold2); margin-bottom:2px; }
+    .time-slot.blocked { background:rgba(139,26,26,.06); color:rgba(245,240,232,.2); cursor:not-allowed; border-color:rgba(245,240,232,.06); }
+    .dur-btn:disabled { opacity:.3; cursor:not-allowed; border-color:rgba(245,240,232,.1); color:rgba(245,240,232,.2); }
     .duration-selector { display:flex; gap:6px; flex-wrap:wrap; margin-top:12px; }
     .dur-btn {
       padding:8px 16px; font-family:'Bebas Neue',sans-serif; font-size:14px; letter-spacing:.06em;
@@ -1732,39 +1734,81 @@ function isPast(dateStr, hora){
   return hora <= now.getHours() + now.getMinutes()/60;
 }
 
+const CLOSING_HOUR = 25; // 1:00 AM en notación extendida
+
+function rangeHasOccupied(h, dur){
+  const step = isPadel() ? 0.5 : 1;
+  for(let t = h; t < h + dur; t += step){
+    if(isOccupied(state.date, state.courtId, Math.floor(t))) return true;
+  }
+  return false;
+}
+
+function updateDurationButtons(){
+  if(state.hour === null) return;
+  let firstValid = null;
+  document.querySelectorAll('.dur-btn').forEach(b=>{
+    const d = parseFloat(b.dataset.dur);
+    const exceeds = state.hour + d > CLOSING_HOUR;
+    const conflicts = rangeHasOccupied(state.hour, d);
+    const invalid = exceeds || conflicts;
+    b.disabled = invalid;
+    if(invalid && b.classList.contains('selected')){
+      b.classList.remove('selected');
+    }
+    if(!invalid && !firstValid) firstValid = b;
+  });
+  // Si la duración actual quedó inválida, seleccionar la primera válida
+  const hasSel = document.querySelector('.dur-btn.selected');
+  if(!hasSel && firstValid){
+    firstValid.classList.add('selected');
+    state.duration = parseFloat(firstValid.dataset.dur);
+  }
+}
+
 function renderTimeGrid(){
   const grid=document.getElementById('timeGrid');
   grid.innerHTML='';
   const dur = state.duration || 1;
   const slots = getSlots();
   slots.forEach(h=>{
-    const occ     = isOccupied(state.date, state.courtId, Math.floor(h));
-    const past    = isPast(state.date, h);
+    const selfOcc  = isOccupied(state.date, state.courtId, Math.floor(h));
+    const past     = isPast(state.date, h);
     const inRange  = state.hour !== null && h >= state.hour && h < state.hour + dur;
     const isEndMark= state.hour !== null && h === state.hour + dur;
     const div      = document.createElement('div');
 
-    if(occ)           div.className = 'time-slot occupied';
-    else if(past)     div.className = 'time-slot past';
-    else if(inRange)  div.className = 'time-slot selected';
-    else if(isEndMark)div.className = 'time-slot end-mark';
-    else              div.className = 'time-slot free';
+    if(selfOcc)        div.className = 'time-slot occupied';
+    else if(past)      div.className = 'time-slot past';
+    else if(inRange)   div.className = 'time-slot selected';
+    else if(isEndMark) div.className = 'time-slot end-mark';
+    else               div.className = 'time-slot free';
 
     div.textContent = fmtSlot(h);
 
-    if(!occ && !past) div.onclick = ()=>{
-      state.hour=h; renderTimeGrid(); renderSummary();
-      showPaso('paso4'); updateSteps();
-      setTimeout(()=>document.getElementById('paso4').scrollIntoView({behavior:'smooth',block:'nearest'}),100);
-    };
+    if(!selfOcc && !past){
+      const wouldConflict = rangeHasOccupied(h, dur);
+      const wouldExceed   = h + dur > CLOSING_HOUR;
+      if(!wouldConflict && !wouldExceed){
+        div.onclick = ()=>{
+          state.hour=h; renderTimeGrid(); updateDurationButtons(); renderSummary();
+          showPaso('paso4'); updateSteps();
+          setTimeout(()=>document.getElementById('paso4').scrollIntoView({behavior:'smooth',block:'nearest'}),100);
+        };
+      } else {
+        div.className = 'time-slot blocked';
+        div.title = wouldExceed ? 'El complejo cierra a la 1:00 AM' : 'Conflicto con un turno ya reservado';
+      }
+    }
 
-    if(past && !occ) div.title = 'Este horario ya pasó';
+    if(past && !selfOcc) div.title = 'Este horario ya pasó';
 
     grid.appendChild(div);
   });
 }
 
 function selectDuration(el){
+  if(el.disabled) return;
   document.querySelectorAll('.dur-btn').forEach(b=>b.classList.remove('selected'));
   el.classList.add('selected');
   state.duration=parseFloat(el.dataset.dur);
