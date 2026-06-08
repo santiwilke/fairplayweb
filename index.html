@@ -1389,9 +1389,20 @@ let disponibilidadMesActual = null; // mes cargado actualmente en OCCUPIED
 
 // ── Parser CSV mínimo ──
 function parseCSV(text) {
-  const lines = text.trim().split('\n').map(l => l.split(',').map(c => c.trim().replace(/^"|"$/g, '')));
-  const headers = lines[0];
-  return lines.slice(1).map(row => {
+  const rows = [];
+  let cur = '', inQuote = false, fields = [];
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"') { inQuote = !inQuote; }
+    else if (ch === ',' && !inQuote) { fields.push(cur.trim()); cur = ''; }
+    else if ((ch === '\n' || ch === '\r') && !inQuote) {
+      if (ch === '\r' && text[i+1] === '\n') i++;
+      fields.push(cur.trim()); rows.push(fields); fields = []; cur = '';
+    } else { cur += ch; }
+  }
+  if (cur || fields.length) { fields.push(cur.trim()); rows.push(fields); }
+  const headers = rows[0] || [];
+  return rows.slice(1).map(row => {
     const obj = {};
     headers.forEach((h, i) => obj[h] = row[i] ?? '');
     return obj;
