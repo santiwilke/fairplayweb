@@ -1644,7 +1644,10 @@ const revealObserver = new IntersectionObserver((entries) => {
 }, { threshold:0.1, rootMargin:'0px 0px -40px 0px' });
 document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 
-function todayStr(){ return new Date().toISOString().split('T')[0]; }
+function todayStr(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 
 async function init(){
   const today = todayStr();
