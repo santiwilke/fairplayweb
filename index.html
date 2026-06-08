@@ -1786,18 +1786,19 @@ function renderTimeGrid(){
 
     div.textContent = fmtSlot(h);
 
-    if(!selfOcc && !past){
-      const wouldConflict = rangeHasOccupied(h, dur);
-      const wouldExceed   = h + dur > CLOSING_HOUR;
+    if(!selfOcc && !past && !inRange && !isEndMark){
+      const minDur = isPadel() ? 0.5 : 1;
+      const wouldConflict = rangeHasOccupied(h, minDur);
+      const wouldExceed   = h + minDur > CLOSING_HOUR;
       if(!wouldConflict && !wouldExceed){
         div.onclick = ()=>{
-          state.hour=h; renderTimeGrid(); updateDurationButtons(); renderSummary();
+          state.hour=h; updateDurationButtons(); renderTimeGrid(); renderSummary();
           showPaso('paso4'); updateSteps();
           setTimeout(()=>document.getElementById('paso4').scrollIntoView({behavior:'smooth',block:'nearest'}),100);
         };
       } else {
         div.className = 'time-slot blocked';
-        div.title = wouldExceed ? 'El complejo cierra a la 1:00 AM' : 'Conflicto con un turno ya reservado';
+        div.title = wouldExceed ? 'El complejo cierra a la 1:00 AM' : 'Turno ocupado';
       }
     }
 
