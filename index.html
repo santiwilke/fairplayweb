@@ -1684,10 +1684,31 @@ function selectType(el){
   setTimeout(()=>document.getElementById('paso2').scrollIntoView({behavior:'smooth',block:'nearest'}),100);
 }
 
-function renderCourts(){
+function renderCourts(showAll){
   const ct=COURTS[state.type];
   const list=document.getElementById('courtList');
   list.innerHTML='';
+
+  // Para F5: mostrar solo Cancha 1 por defecto, protegiendo C2/C3/C4 para F9
+  if(state.type==='futbol5' && !showAll){
+    const c1 = ct.list[0]; // Cancha 1
+    const btn=document.createElement('div');
+    btn.className='court-btn available'+(state.courtId===c1.id?' selected':'');
+    btn.innerHTML=`<span class="court-btn-name">${c1.name}</span><span class="court-btn-avail">Disponible</span>`;
+    btn.onclick=()=>selectCourt(c1.id,c1.name,btn);
+    list.appendChild(btn);
+
+    // Botón para ver el resto
+    const expand=document.createElement('div');
+    expand.style.cssText='margin-top:10px;font-size:12px;color:rgba(245,240,232,.4);cursor:pointer;letter-spacing:.04em;text-align:center;padding:8px;border:1px dashed rgba(245,240,232,.12);transition:color .2s;';
+    expand.textContent='Cancha 1 ocupada en tu horario? Ver Cancha 2, 3 y 4 →';
+    expand.onmouseenter=()=>expand.style.color='rgba(245,240,232,.7)';
+    expand.onmouseleave=()=>expand.style.color='rgba(245,240,232,.4)';
+    expand.onclick=()=>renderCourts(true);
+    list.appendChild(expand);
+    return;
+  }
+
   ct.list.forEach(c=>{
     const btn=document.createElement('div');
     btn.className='court-btn available'+(state.courtId===c.id?' selected':'');
