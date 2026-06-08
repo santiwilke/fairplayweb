@@ -1359,15 +1359,16 @@ const WA_NUMBER = '5491135871933';
 //  GOOGLE SHEETS — URLs de publicación CSV
 // ═══════════════════════════════════════════
 const SHEETS = {
-  precios:        'https://docs.google.com/spreadsheets/d/e/2PACX-1vTxVA45AYbS7xgNBNJUp4O0NOIlxEnDMUK13Gn2e0HNW-NH_HkwZxmuKFXvgBzqb7V9611uWcbI5I2F/pub?gid=1163567334&single=true&output=csv',
-  disponibilidad: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTxVA45AYbS7xgNBNJUp4O0NOIlxEnDMUK13Gn2e0HNW-NH_HkwZxmuKFXvgBzqb7V9611uWcbI5I2F/pub?gid=641718710&single=true&output=csv',
+  precios: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTxVA45AYbS7xgNBNJUp4O0NOIlxEnDMUK13Gn2e0HNW-NH_HkwZxmuKFXvgBzqb7V9611uWcbI5I2F/pub?gid=1837573883&single=true&output=csv',
 };
 
-// Construye la URL de disponibilidad para el mes dado (ej: "2026-07")
-// Cada mes tiene su propio gid — se debe agregar acá cuando se cree una nueva hoja
-const DISPONIBILIDAD_POR_MES = {
-  '2026-06': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTxVA45AYbS7xgNBNJUp4O0NOIlxEnDMUK13Gn2e0HNW-NH_HkwZxmuKFXvgBzqb7V9611uWcbI5I2F/pub?gid=753765187&single=true&output=csv',
-  '2026-07': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTxVA45AYbS7xgNBNJUp4O0NOIlxEnDMUK13Gn2e0HNW-NH_HkwZxmuKFXvgBzqb7V9611uWcbI5I2F/pub?gid=641718710&single=true&output=csv',
+// Cada mes tiene su propio par de tabs (futbol + padel)
+// Agregar el mes nuevo acá cuando se creen los tabs en el Sheet
+const DISPONIBILIDAD_FUTBOL_POR_MES = {
+  '2026-06': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTxVA45AYbS7xgNBNJUp4O0NOIlxEnDMUK13Gn2e0HNW-NH_HkwZxmuKFXvgBzqb7V9611uWcbI5I2F/pub?gid=1576443018&single=true&output=csv',
+};
+const DISPONIBILIDAD_PADEL_POR_MES = {
+  '2026-06': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTxVA45AYbS7xgNBNJUp4O0NOIlxEnDMUK13Gn2e0HNW-NH_HkwZxmuKFXvgBzqb7V9611uWcbI5I2F/pub?gid=325710137&single=true&output=csv',
 };
 
 // ═══════════════════════════════════════════
@@ -1456,16 +1457,43 @@ const CANCHA_NOMBRE_A_ID = {
   'Vidrio 2':         'pav-2',
 };
 
+// Convierte "8:30" → 8.5, "8:00" → 8, "8" → 8
+function parseHora(str) {
+  if (!str) return NaN;
+  if (str.includes(':')) {
+    const [h, m] = str.split(':');
+    return parseInt(h) + parseInt(m) / 60;
+  }
+  return parseFloat(str);
+}
+
+function procesarCSVDisponibilidad(rows, mesKey) {
+  rows.forEach(row => {
+    const nombreCancha = (row['CANCHA'] || '').trim();
+    const canchaId     = CANCHA_NOMBRE_A_ID[nombreCancha];
+    const hora         = parseHora(row['HORA']);
+    if (!canchaId || isNaN(hora)) return;
+    for (let dia = 1; dia <= 31; dia++) {
+      const val = (row[String(dia)] || '').toUpperCase().trim();
+      if (val === 'X') {
+        const fechaKey = `${mesKey}-${String(dia).padStart(2,'0')}`;
+        OCCUPIED.set(occupiedKey(fechaKey, canchaId, hora), true);
+      }
+    }
+  });
+}
+
 async function cargarDisponibilidad(mesKey) {
-  // Si ya está cargado este mes, no volver a pedir
   if (disponibilidadMesActual === mesKey) return;
 
   OCCUPIED.clear();
   disponibilidadMesActual = mesKey;
 
-  const url = DISPONIBILIDAD_POR_MES[mesKey];
-  if (!url) {
-    console.info(`No hay hoja de disponibilidad para ${mesKey}`);
+  const urlFutbol = DISPONIBILIDAD_FUTBOL_POR_MES[mesKey];
+  const urlPadel  = DISPONIBILIDAD_PADEL_POR_MES[mesKey];
+
+  if (!urlFutbol && !urlPadel) {
+    console.info(`No hay hojas de disponibilidad para ${mesKey}`);
     sheetsLoaded.disponibilidad = true;
     return;
   }
@@ -1473,28 +1501,14 @@ async function cargarDisponibilidad(mesKey) {
   mostrarSpinnerDisponibilidad(true);
 
   try {
-    const r = await fetch(url);
-    if (!r.ok) throw new Error('Sin respuesta');
-    const text = await r.text();
-    const rows = parseCSV(text);
+    const fetches = [];
+    if (urlFutbol) fetches.push(fetch(urlFutbol).then(r => r.text()));
+    if (urlPadel)  fetches.push(fetch(urlPadel).then(r => r.text()));
 
-    // El CSV exportado tiene: CANCHA | TIPO | HORA | 1 | 2 | ... | 31
-    // (CANCHA_ID está oculta en la Sheet y NO aparece en la exportación CSV)
-    rows.forEach(row => {
-      const nombreCancha = (row['CANCHA'] || '').trim();
-      const canchaId     = CANCHA_NOMBRE_A_ID[nombreCancha];
-      const hora         = parseInt(row['HORA'], 10);
+    const [textFutbol, textPadel] = await Promise.all(fetches);
 
-      if (!canchaId || isNaN(hora)) return;
-
-      for (let dia = 1; dia <= 31; dia++) {
-        const val = (row[String(dia)] || '').toUpperCase().trim();
-        if (val === 'X') {
-          const fechaKey = `${mesKey}-${String(dia).padStart(2,'0')}`;
-          OCCUPIED.set(occupiedKey(fechaKey, canchaId, hora), true);
-        }
-      }
-    });
+    if (textFutbol) procesarCSVDisponibilidad(parseCSV(textFutbol), mesKey);
+    if (textPadel)  procesarCSVDisponibilidad(parseCSV(textPadel),  mesKey);
 
     console.log(`Disponibilidad ${mesKey} cargada — ${OCCUPIED.size} slots ocupados`);
     sheetsLoaded.disponibilidad = true;
@@ -1760,7 +1774,7 @@ const CLOSING_HOUR = 25; // 1:00 AM en notación extendida
 function rangeHasOccupied(h, dur){
   const step = isPadel() ? 0.5 : 1;
   for(let t = h; t < h + dur; t += step){
-    if(isOccupied(state.date, state.courtId, Math.floor(t))) return true;
+    if(isOccupied(state.date, state.courtId, isPadel() ? t : Math.floor(t))) return true;
   }
   return false;
 }
@@ -1793,7 +1807,7 @@ function renderTimeGrid(){
   const dur = state.duration || 1;
   const slots = getSlots();
   slots.forEach(h=>{
-    const selfOcc  = isOccupied(state.date, state.courtId, Math.floor(h));
+    const selfOcc  = isOccupied(state.date, state.courtId, isPadel() ? h : Math.floor(h));
     const past     = isPast(state.date, h);
     const inRange  = state.hour !== null && h >= state.hour && h < state.hour + dur;
     const isEndMark= state.hour !== null && h === state.hour + dur;
@@ -1903,7 +1917,7 @@ function updateAvailTable(){
   all.forEach(c=>{
     html+=`<tr><td>${c.name}</td>`;
     slots.forEach(h=>{
-      const occ=isOccupied(date,c.id,Math.floor(h));
+      const occ=isOccupied(date,c.id,isPadelView?h:Math.floor(h));
       html+=`<td><span class="cell-badge ${occ?'occ':'free'}">${occ?crossSVG:checkSVG}</span></td>`;
     });
     html+='</tr>';
