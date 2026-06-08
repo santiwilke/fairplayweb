@@ -1422,7 +1422,7 @@ async function cargarPrecios() {
 
 // ── Actualizar todos los precios visibles en el DOM ──
 function actualizarPreciosEnDOM() {
-  const fmt = n => '$' + n.toLocaleString('es-AR');
+  const fmt = n => '$' + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   // Cards de canchas
   const cardMap = { futbol5: 0, futbol9: 1, futbol11: 2, padelCemento: 3, padelVidrio: 4 };
   document.querySelectorAll('.court-price').forEach((el, i) => {
