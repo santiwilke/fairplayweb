@@ -1675,27 +1675,26 @@ function isPast(dateStr, hora){
 function renderTimeGrid(){
   const grid=document.getElementById('timeGrid');
   grid.innerHTML='';
+  const dur = state.duration || 1;
   HOURS.forEach(h=>{
-    const occ  = isOccupied(state.date, state.courtId, h);
-    const past = isPast(state.date, h);
-    const sel  = state.hour === h;
-    const div  = document.createElement('div');
+    const occ     = isOccupied(state.date, state.courtId, h);
+    const past    = isPast(state.date, h);
+    const inRange = state.hour !== null && h >= state.hour && h < state.hour + dur;
+    const div     = document.createElement('div');
 
-    if(occ)       div.className = 'time-slot occupied';
-    else if(past) div.className = 'time-slot past';
-    else if(sel)  div.className = 'time-slot selected';
-    else          div.className = 'time-slot free';
+    if(occ)          div.className = 'time-slot occupied';
+    else if(past)    div.className = 'time-slot past';
+    else if(inRange) div.className = 'time-slot selected';
+    else             div.className = 'time-slot free';
 
     div.textContent = `${h}:00`;
 
-    // Solo clickeable si no está ocupado ni vencido
     if(!occ && !past) div.onclick = ()=>{
       state.hour=h; renderTimeGrid(); renderSummary();
       showPaso('paso4'); updateSteps();
       setTimeout(()=>document.getElementById('paso4').scrollIntoView({behavior:'smooth',block:'nearest'}),100);
     };
 
-    // Tooltip en horarios vencidos
     if(past && !occ) div.title = 'Este horario ya pasó';
 
     grid.appendChild(div);
@@ -1706,7 +1705,7 @@ function selectDuration(el){
   document.querySelectorAll('.dur-btn').forEach(b=>b.classList.remove('selected'));
   el.classList.add('selected');
   state.duration=parseFloat(el.dataset.dur);
-  if(state.hour!==null) renderSummary();
+  if(state.hour!==null){ renderTimeGrid(); renderSummary(); }
 }
 
 function renderSummary(){
