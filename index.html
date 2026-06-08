@@ -1407,7 +1407,7 @@ async function cargarPrecios() {
     const rows = parseCSV(text);
     rows.forEach(row => {
       const tipo = row['tipo'];
-      const precio = parseInt(row['precio'], 10);
+      const precio = parseInt((row['precio'] || '').replace(/[^0-9]/g, ''), 10);
       if (COURTS[tipo] && !isNaN(precio)) {
         COURTS[tipo].price = precio;
       }
