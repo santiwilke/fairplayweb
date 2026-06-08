@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mundo Fair Play — Complejo Deportivo · Canning, Ezeiza</title>
-  <meta name="description" content="Complejo deportivo en Canning, Ezeiza. Reservá tu cancha de Fútbol 5, Fútbol 9 o Pádel online. Abierto todos los días de 08:00 a 01:00 hs del día siguiente." />
+  <meta name="description" content="Complejo deportivo en Canning, Ezeiza. Reservá tu cancha de Fútbol 5, Fútbol 9 o Pádel online. Abierto todos los días de 08:00 AM a 01:00 AM del día siguiente." />
   <meta property="og:title" content="Mundo Fair Play — Complejo Deportivo" />
   <meta property="og:description" content="Fútbol 5, Fútbol 9 y Pádel en Canning, Ezeiza. Reservá tu turno fácil y rápido." />
   <meta property="og:type" content="website" />
@@ -859,7 +859,7 @@
   <div class="hero-inner">
     <p class="hero-eyebrow anim-slide">Complejo Deportivo · Pilcomayo 551 · Canning</p>
     <h1 class="anim-up delay-1">Mundo<br><em>Fair</em><br>Play</h1>
-    <p class="hero-tagline anim-up delay-2">Fútbol 5 y 9 · Pádel Cemento y Vidrio · Abierto todos los días de 08:00 a 01:00 hs</p>
+    <p class="hero-tagline anim-up delay-2">Fútbol 5 y 9 · Pádel Cemento y Vidrio · Abierto todos los días de 08:00 AM a 01:00 AM</p>
 
     <div class="hero-sports-grid anim-up delay-3">
       <a href="#reservas" class="hero-sport-btn" onclick="document.getElementById('reservas').scrollIntoView({behavior:'smooth'});return false;">
@@ -1209,8 +1209,8 @@
           <div>
             <div class="contact-label">Horarios</div>
             <div class="contact-value">
-              Lunes a Domingo · 08:00 a 01:00 hs del día siguiente<br>
-              Feriados · 08:00 a 01:00 hs del día siguiente
+              Lunes a Domingo · 08:00 AM a 01:00 AM<br>
+              Feriados · 08:00 AM a 01:00 AM
             </div>
           </div>
         </div>
@@ -1219,7 +1219,7 @@
           <div>
             <div class="contact-label">Redes sociales</div>
             <div class="contact-value">
-              <a href="https://www.instagram.com/mundofairplaycanning" target="_blank">@mundofairplaycanning</a> en Instagram
+              <a href="https://www.instagram.com/mundofairplaycanning" target="_blank">@mundofairplaycanning</a>
             </div>
           </div>
         </div>
@@ -1268,19 +1268,19 @@
       <div class="footer-schedule">
         <div class="footer-schedule-row">
           <span class="footer-schedule-day">Lunes a Viernes</span>
-          <span class="footer-schedule-hours">08:00 – 01:00 hs</span>
+          <span class="footer-schedule-hours">08:00 AM – 01:00 AM</span>
         </div>
         <div class="footer-schedule-row">
           <span class="footer-schedule-day">Sábados</span>
-          <span class="footer-schedule-hours">08:00 – 01:00 hs</span>
+          <span class="footer-schedule-hours">08:00 AM – 01:00 AM</span>
         </div>
         <div class="footer-schedule-row">
           <span class="footer-schedule-day">Domingos</span>
-          <span class="footer-schedule-hours">08:00 – 01:00 hs</span>
+          <span class="footer-schedule-hours">08:00 AM – 01:00 AM</span>
         </div>
         <div class="footer-schedule-row">
           <span class="footer-schedule-day">Feriados</span>
-          <span class="footer-schedule-hours">08:00 – 01:00 hs</span>
+          <span class="footer-schedule-hours">08:00 AM – 01:00 AM</span>
         </div>
       </div>
     </div>
@@ -1665,19 +1665,29 @@ function selectCourt(id,name,btn){
   setTimeout(()=>document.getElementById('paso3').scrollIntoView({behavior:'smooth',block:'nearest'}),100);
 }
 
+function isPadel(){ return state.type==='padelCemento'||state.type==='padelVidrio'; }
+
+function getSlots(){
+  if(isPadel()) return Array.from({length:33},(_,i)=>8+i*0.5); // 8:00 a 24:00 de 30 en 30min
+  return HOURS;
+}
+
+function fmtSlot(h){ return Number.isInteger(h)?`${h}:00`:`${Math.floor(h)}:30`; }
+
 function isPast(dateStr, hora){
   const now = new Date();
   const today = todayStr();
-  if(dateStr !== today) return false; // fecha futura: nunca vencida
-  return hora <= now.getHours(); // bloquear hora actual y anteriores
+  if(dateStr !== today) return false;
+  return hora <= now.getHours() + now.getMinutes()/60;
 }
 
 function renderTimeGrid(){
   const grid=document.getElementById('timeGrid');
   grid.innerHTML='';
   const dur = state.duration || 1;
-  HOURS.forEach(h=>{
-    const occ     = isOccupied(state.date, state.courtId, h);
+  const slots = getSlots();
+  slots.forEach(h=>{
+    const occ     = isOccupied(state.date, state.courtId, Math.floor(h));
     const past    = isPast(state.date, h);
     const inRange = state.hour !== null && h >= state.hour && h < state.hour + dur;
     const div     = document.createElement('div');
@@ -1687,7 +1697,7 @@ function renderTimeGrid(){
     else if(inRange) div.className = 'time-slot selected';
     else             div.className = 'time-slot free';
 
-    div.textContent = `${h}:00`;
+    div.textContent = fmtSlot(h);
 
     if(!occ && !past) div.onclick = ()=>{
       state.hour=h; renderTimeGrid(); renderSummary();
@@ -1714,14 +1724,16 @@ function renderSummary(){
   const total=ct.price*dur;
   const fd=formatDate(state.date);
   const hf=state.hour+dur;
-  const hfStr=Number.isInteger(hf)?`${hf}:00`:`${Math.floor(hf)}:30`;
+  const startStr=fmtSlot(state.hour);
+  const endStr=fmtSlot(hf);
+  const durStr=Number.isInteger(dur)?`${dur} hora${dur!==1?'s':''}`:`${dur} hs`;
   document.getElementById('summaryBox').innerHTML=`
     <div class="summary-row"><span class="label">Fecha</span><span class="value">${fd}</span></div>
     <div class="summary-row"><span class="label">Cancha</span><span class="value">${ct.label} — ${state.courtName}</span></div>
-    <div class="summary-row"><span class="label">Horario</span><span class="value">${state.hour}:00 → ${hfStr} hs</span></div>
-    ${dur>1?`<div class="summary-row"><span class="label">Duración</span><span class="value">${dur} horas</span></div>`:''}
+    <div class="summary-row"><span class="label">Horario</span><span class="value">${startStr} → ${endStr} hs</span></div>
+    ${dur!==1?`<div class="summary-row"><span class="label">Duración</span><span class="value">${durStr}</span></div>`:''}
     <div class="summary-row summary-total"><span class="label">Total</span><span class="value">$${total.toLocaleString('es-AR')}</span></div>`;
-  const msg=`Hola! Quiero reservar en Mundo Fair Play:\n\nFecha: ${fd}\nCancha: ${ct.label} - ${state.courtName}\nHorario: ${state.hour}:00 a ${hfStr} hs${dur>1?`\nDuracion: ${dur} horas`:''}\nTotal: $${total.toLocaleString('es-AR')}\n\nEsta disponible?`;
+  const msg=`Hola! Quiero reservar en Mundo Fair Play:\n\nFecha: ${fd}\nCancha: ${ct.label} - ${state.courtName}\nHorario: ${startStr} a ${endStr} hs${dur!==1?`\nDuracion: ${durStr}`:''}\nTotal: $${total.toLocaleString('es-AR')}\n\nEsta disponible?`;
   const waBtn=document.getElementById('waBtn');
   waBtn.href=`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`;
   waBtn.classList.remove('disabled');
